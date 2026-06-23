@@ -249,7 +249,7 @@ function wartt_log_entry($id_rule, $bucket_type, $info)
  */
 function check_table_maint()
 {
-	global $smcFunc, $modSettings, $db_type;
+	global $smcFunc, $modSettings, $db_type, $txt;
 
 	// Default to 2 hours for counter retention
 	if (empty($modSettings['wartt_counter_ret_mins']))
@@ -292,6 +292,28 @@ function check_table_maint()
 			ENGINE=MEMORY',
 			array()
 		);
+	}
+
+	// Clean up expired blocks.  These may not be caught by wartt_check_thresholds if volume
+	// drops off rapidly, since that check is request-driven, i.e., no request = no check...
+	// Also, if rule has since been deleted or disabled, those get cleaned up here as well.
+	$active_blocks = get_block_info(0, 10000);
+	foreach($active_blocks AS $active_block)
+	{
+		// Get the rule
+		$rule = get_rule($active_block['id_rule']);
+
+		// Check the threshold
+		if (!empty($rule))
+			$count = check_wartt_threshold($active_block['id_rule'], $active_block['ip_bucket'], $rule['minutes']);
+
+		// If threshold not met, or rule deleted or disabled, inactivate the block
+		if (empty($rule) || ($count < $rule['threshold']) || empty($rule['enabled']))
+		{
+			loadLanguage('WARTT');
+			remove_wartt_block($active_block['id_rule'], $active_block['ip_bucket']);
+			wartt_log_entry($active_block['id_rule'], $active_block['bucket_type'], $txt['wartt_inactivated'] . ' ' . $active_block['ip_bucket']);
+		}
 	}
 
 	// It won't log it unless we say it's true...
