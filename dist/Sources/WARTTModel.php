@@ -348,9 +348,14 @@ function get_block_info($start = 0, $limit = 0, $sort = 'datetime DESC')
 		)
 	);
 
+	// Since this function is used in Scheduled Tasks, and may be called by cron,
+	// can't count on everything being loaded, e.g., $txt.  So don't use $txt if
+	// running in background mode.
+	$show_today = (SMF === 'BACKGROUND') ? false : true;
+
 	while ($row = $smcFunc['db_fetch_assoc']($request))
 	{
-		$row['datetime_disp'] = timeformat($row['datetime']);
+		$row['datetime_disp'] = timeformat($row['datetime'], $show_today);
 		$block_info[] = $row;
 	}
 	$smcFunc['db_free_result']($request);

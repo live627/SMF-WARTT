@@ -51,3 +51,4 @@ Guidance:
  - v1.0.1 Some query tuning
  - v1.0.2 Use hook
  - v1.0.3 Improve cleanup of expired blocks
+ - v1.0.4 Fix offset on null error
