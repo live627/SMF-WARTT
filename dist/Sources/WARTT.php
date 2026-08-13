@@ -154,7 +154,7 @@ function wartt_bucket_value($rule)
 			$mask = str_repeat("\xff", $full_bytes);
 
 			if ($remaining_bits)
-				$mask .= chr(0xff << (8 - $remaining_bits));
+				$mask .= chr((0xff << (8 - $remaining_bits)) & 0xff);
 
 			$mask .= str_repeat("\0", strlen($ip) - strlen($mask));
 
