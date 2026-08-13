@@ -1,4 +1,5 @@
 <?php
+
 /**
  *	Main logic for the WARTT mod for SMF..
  *
@@ -77,7 +78,6 @@ function wartt_check_thresholds()
 				$curr_state = 1;
 				add_wartt_block($rule['id_rule'], $bucket, $rule['bucket_type']);
 				wartt_log_entry($rule['id_rule'], $rule['bucket_type'], $txt['wartt_activated'] . ' ' . $bucket);
-
 			}
 			else
 			{
@@ -141,16 +141,25 @@ function wartt_bucket_value($rule)
 		// IP mask...
 		case 'ip_mask':
 			$ip = inet_pton($_SERVER['REMOTE_ADDR']);
-			$masklen = strlen($ip) == 4 ? $modSettings['wartt_ipv4_masklen'] : $modSettings['wartt_ipv6_masklen'];
+
+			if ($ip === false)
+				return false;
+
 			$bits = strlen($ip) * 8;
-			$masklen = min($masklen, $bits);
-			$bin_mask = str_repeat('1', $masklen) . str_repeat('0', $bits - $masklen);
-			$bin_chunks = str_split($bin_mask, 8);
-			$mask = '';
-			foreach ($bin_chunks as $chunk)
-				$mask .= chr(bindec($chunk));
-			$bucket_n = $ip & $mask;
-			$bucket = inet_ntop($bucket_n) . '/' . $masklen;
+			$masklen = min($bits, $bits === 32 ? $modSettings['wartt_ipv4_masklen'] : $modSettings['wartt_ipv6_masklen']);
+
+			$full_bytes = intdiv($masklen, 8);
+			$remaining_bits = $masklen % 8;
+
+			$mask = str_repeat("\xff", $full_bytes);
+
+			if ($remaining_bits)
+				$mask .= chr(0xff << (8 - $remaining_bits));
+
+			$mask .= str_repeat("\0", strlen($ip) - strlen($mask));
+
+			$bucket = inet_ntop($ip & $mask) . '/' . $masklen;
+
 			break;
 		// Server var...
 		case 'server_var':
